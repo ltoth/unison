@@ -12,7 +12,7 @@ import sys
 import os
 import stat
 from optparse import OptionParser
-from time import time
+from time import time, sleep
 
 def mydebug(fmt, *args, **kwds):
     if not op.debug:
@@ -67,7 +67,7 @@ def update_changes_nomangle(result):
 
     mydebug('Changed paths: %s\n',result)
     try:
-        f = open(op.absoutfile,'a')
+        f = open(op.absoutfile,'ab')
         f.write(result+'\n')
         f.close()
     except IOError:
@@ -124,10 +124,10 @@ def relpath(root,path):
     mydebug('relpath: abspath(%s) = %s', path, abspath)
 	
     #make sure the root and abspath both end with a '/'
-    if not root[-1]=='/':
-        root += '/'
-    if not abspath[-1]=='/':
-        abspath += '/'
+    if not root[-1]==os.sep:
+        root += os.sep
+    if not abspath[-1]==os.sep:
+        abspath += os.sep
 		
     mydebug('relpath: root = %s', root)
 
@@ -498,27 +498,47 @@ if sys.platform == 'win32':
 			None
 		)
 		while 1:
-			results = win32file.ReadDirectoryChangesW (
-				dirHandle,
-				1024,
-				True,
-				win32con.FILE_NOTIFY_CHANGE_FILE_NAME |
-					win32con.FILE_NOTIFY_CHANGE_DIR_NAME |
-					win32con.FILE_NOTIFY_CHANGE_ATTRIBUTES |
-					win32con.FILE_NOTIFY_CHANGE_SIZE |
-					win32con.FILE_NOTIFY_CHANGE_LAST_WRITE |
-					win32con.FILE_NOTIFY_CHANGE_SECURITY,
-				None,
-				None
-			)
-			for action, file in results:
-				full_filename = os.path.join (abspath, file)
-				# This will return 'dir updated' for every file update within dir, but
-				# we don't want to send unison on a full dir sync in this situation.
-				if not (os.path.isdir(full_filename) and action == 3):
-					file_lock.acquire()
-					update_changes_nomangle(full_filename)
-					file_lock.release()
+			# TODO: Rescue on disconnect of network folder
+			#
+			#Exception in thread Thread-1:
+			#Traceback (most recent call last):
+			#  File "C:\Python26\lib\threading.py", line 532, in __bootstrap_inner
+			#    self.run()
+			#  File "C:\Python26\lib\threading.py", line 484, in run
+			#    self.__target(*self.__args, **self.__kwargs)
+			#  File "C:\local\fsmonitor.py", line 540, in win32watcherThread
+			#    None
+			#error:
+			#(64, 'ReadDirectoryChangesW', 'The specified network name is no longer available.')
+			#(53, 'ReadDirectoryChangesW', 'The network path was not found.'
+			#(6, 'ReadDirectoryChangesW', 'The handle is invalid.')
+
+			try:
+				sleep(1)
+				results = win32file.ReadDirectoryChangesW (
+					dirHandle,
+					65536,
+					True,
+					win32con.FILE_NOTIFY_CHANGE_FILE_NAME |
+						win32con.FILE_NOTIFY_CHANGE_DIR_NAME |
+						win32con.FILE_NOTIFY_CHANGE_ATTRIBUTES |
+						win32con.FILE_NOTIFY_CHANGE_SIZE |
+						win32con.FILE_NOTIFY_CHANGE_LAST_WRITE |
+						win32con.FILE_NOTIFY_CHANGE_SECURITY,
+					None,
+					None
+				)
+				mydebug('results: %s', results)
+				for action, file in results:
+					full_filename = os.path.join (abspath, file)
+					# This will return 'dir updated' for every file update within dir, but
+					# we don't want to send unison on a full dir sync in this situation.
+					if not (os.path.isdir(full_filename) and action == 3):
+						file_lock.acquire()
+						update_changes_nomangle(file)
+						file_lock.release()
+			except Exception, e:
+				print "win32watcherThread error: ", abspath, e
 	
 	def win32watcher():
 		file_lock = threading.Lock()
@@ -529,7 +549,7 @@ if sys.platform == 'win32':
 			
 		try:
 			while 1:
-				pass
+				sleep(5)
 		except KeyboardInterrupt:
 			print "Cleaning up."
 
