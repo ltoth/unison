@@ -44,6 +44,10 @@ def timer_callback(timer, streamRef):
     FSEventStreamFlushAsync(streamRef)
 
 def update_changes(result):
+    # Ignore Unison temp files
+    if result.find('.unison.tmp') != -1:
+        return
+
     mydebug('Update_changes: absresult = %s',result)
     #print('absresult',result)
     result = [mangle_filename(path) for path in result]
@@ -64,6 +68,10 @@ def update_changes(result):
 def update_changes_nomangle(result):
     # In win32 there are no symlinks, therefore file mangling
     # is not required
+
+    # Ignore Unison temp files
+    if result.find('.unison.tmp') != -1:
+        return
 
     mydebug('Changed paths: %s\n',result)
     try:
