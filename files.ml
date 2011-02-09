@@ -742,7 +742,9 @@ let copyBack fspathFrom pathFrom rootTo pathTo propsTo uiTo id =
   let info = Fileinfo.get false fspathFrom pathFrom in
   let fp = Os.fingerprint fspathFrom pathFrom info in
   let stamp = Osx.stamp info.Fileinfo.osX in
-  let newprops = Props.setLength propsTo (Props.length info.Fileinfo.desc) in
+  (* FIX: This should start with propsTo with length and utime replaced to 
+   * those of pathFrom .*)
+  let newprops = info.Fileinfo.desc in
   Copy.file
     (Local, fspathFrom) pathFrom rootTo workingDirForCopy tempPathTo realPathTo
     `Copy newprops fp None stamp id >>= fun info ->

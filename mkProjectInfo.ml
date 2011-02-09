@@ -42,7 +42,7 @@ let pointVersionOrigin = 455 (* Revision that corresponds to point version 0 *)
 (* ---------------------------------------------------------------------- *)
 (* You shouldn't need to edit below. *)
 
-let revisionString = "$Rev: 471 $";;
+let revisionString = "$Rev: 472 $";;
 
 let pointVersion = 
   Scanf.sscanf revisionString "$Rev: %d " (fun x -> x) - pointVersionOrigin;;
